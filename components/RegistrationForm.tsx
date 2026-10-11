@@ -1,15 +1,16 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
-import { useRouter } from 'next/router';
-import { useAssessment } from '../contexts/AssessmentContext';
-import { RegistrationFormValues } from '../types/types';
+import { RegistrationFormValues, UserInfo } from '../types/types';
 
 const EMAIL_PATTERN = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
 
-const RegistrationForm: React.FC = () => {
-  const { register, handleSubmit, getValues, formState: { errors, isSubmitting } } = useForm<RegistrationFormValues>();
-  const router = useRouter();
-  const { setUserInfo } = useAssessment();
+interface RegistrationFormProps {
+  /** Resolves to an error message to show, or nothing on success. */
+  onRegister: (info: UserInfo) => Promise<string | void> | void;
+}
+
+const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
+  const { register, handleSubmit, getValues, setError, formState: { errors, isSubmitting } } = useForm<RegistrationFormValues>();
 
   const validateEmail = async (email: string) => {
     if (!EMAIL_PATTERN.test(email.trim())) {
@@ -32,9 +33,11 @@ const RegistrationForm: React.FC = () => {
     return true;
   };
 
-  const onSubmit = (data: RegistrationFormValues) => {
-    setUserInfo({ name: data.name.trim(), email: data.email.trim() });
-    router.push('/instructions');
+  const onSubmit = async (data: RegistrationFormValues) => {
+    const error = await onRegister({ name: data.name.trim(), email: data.email.trim() });
+    if (error) {
+      setError('root', { message: error });
+    }
   };
 
   return (
@@ -83,6 +86,8 @@ const RegistrationForm: React.FC = () => {
         />
         {errors.confirmEmail && <p className="mt-1 text-sm text-red-400">{errors.confirmEmail.message}</p>}
       </div>
+
+      {errors.root && <p className="text-sm text-red-400" role="alert">{errors.root.message}</p>}
 
       <button
         type="submit"

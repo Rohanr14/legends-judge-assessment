@@ -5,14 +5,18 @@ import { CONTACT_EMAIL } from '../utils/constants';
 
 interface VideoPlayerProps {
   youtubeVideoId: string;
-  onPlay?: () => void;
+  /** Called once playback actually starts, with the video's length in seconds. */
+  onStart?: (durationSeconds: number) => void;
+  /** Where to begin, in seconds, read when playback starts (used to resume after a page reload). */
+  getStartOffset?: () => number;
   onEnded: () => void;
+  onError?: () => void;
   onProgress: (progress: number) => void;
 }
 
 // Judges watch each video once, start to finish: there are no YouTube controls,
 // pausing resumes playback, and the video can't be replayed after it ends.
-const VideoPlayer: React.FC<VideoPlayerProps> = React.memo(({ youtubeVideoId, onPlay, onEnded, onProgress }) => {
+const VideoPlayer: React.FC<VideoPlayerProps> = React.memo(({ youtubeVideoId, onStart, getStartOffset, onEnded, onError, onProgress }) => {
   const [playerState, setPlayerState] = useState({
     isPlaying: false,
     hasStarted: false,
@@ -45,11 +49,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = React.memo(({ youtubeVideoId, on
   const handlePlay = useCallback(() => {
     if (!playerState.hasStarted && !playerState.hasEnded) {
       setPlayerState(prev => ({ ...prev, isPlaying: true, hasStarted: true }));
-      onPlay?.();
     } else if (!playerState.hasEnded) {
       setPlayerState(prev => ({ ...prev, isPlaying: true }));
     }
-  }, [playerState.hasStarted, playerState.hasEnded, onPlay]);
+  }, [playerState.hasStarted, playerState.hasEnded]);
+
+  const handleStart = useCallback(() => {
+    const offset = getStartOffset?.() ?? 0;
+    if (offset > 1) {
+      playerRef.current?.seekTo(offset, 'seconds');
+    }
+    onStart?.(playerRef.current?.getDuration() ?? 0);
+  }, [getStartOffset, onStart]);
 
   const handlePause = useCallback(() => {
     if (!playerState.hasEnded) {
@@ -64,7 +75,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = React.memo(({ youtubeVideoId, on
 
   const handleError = useCallback(() => {
     setHasError(true);
-  }, []);
+    onError?.();
+  }, [onError]);
 
   const handleFullscreenToggle = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -84,6 +96,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = React.memo(({ youtubeVideoId, on
         playing={playerState.isPlaying && !playerState.hasEnded}
         controls={false}
         onPlay={handlePlay}
+        onStart={handleStart}
         onProgress={handleProgress}
         onPause={handlePause}
         onEnded={handleEnded}

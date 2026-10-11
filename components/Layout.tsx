@@ -11,11 +11,13 @@ type LayoutProps = {
 };
 
 // Navigating away from these timed steps would lose the judge's progress, so the header links are hidden.
-const TIMED_PAGES = ['/assessment', '/assessment/ranking', '/upload-notes'];
+const TIMED_PAGES = ['/assessment', '/assessment/ranking', '/upload-notes', '/endorse/session'];
 
 const Layout: React.FC<LayoutProps> = ({ children, title = 'DDN Legends Dance Championship' }) => {
   const router = useRouter();
-  const isHomePage = router.pathname === '/';
+  // The endorsement application has its own home page, separate from the mock assessment.
+  const homePath = router.pathname.startsWith('/endorse') ? '/endorse' : '/';
+  const isHomePage = router.pathname === homePath;
   const showNav = !TIMED_PAGES.includes(router.pathname);
 
   return (
@@ -33,7 +35,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title = 'DDN Legends Dance Ch
         {showNav && (
           <div className="space-x-4">
             {!isHomePage && (
-              <Link href="/">
+              <Link href={homePath}>
                 <span className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
                   Home
                 </span>

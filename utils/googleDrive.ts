@@ -62,17 +62,30 @@ export async function createFolder(name: string, parentId: string): Promise<stri
   return res.data.id;
 }
 
-export async function uploadFile(folderId: string, name: string, mimeType: string, content: Buffer): Promise<void> {
+/** Uploads a file and returns its Drive id (or local path in development). */
+export async function uploadFile(folderId: string, name: string, mimeType: string, content: Buffer): Promise<string> {
   const drive = getDrive();
   if (!drive) {
-    await fs.writeFile(path.join(LOCAL_SUBMISSIONS_DIR, folderId, name), content);
-    return;
+    const dir = path.join(LOCAL_SUBMISSIONS_DIR, folderId || 'unconfigured-folder');
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(path.join(dir, name), content);
+    return path.join(dir, name);
+  }
+  if (!folderId) {
+    throw new Error('No Google Drive folder is configured.');
   }
 
-  await drive.files.create({
+  const res = await drive.files.create({
     requestBody: { name, parents: [folderId] },
     media: { mimeType, body: Readable.from(content) },
     fields: 'id',
     supportsAllDrives: true,
   });
+  if (!res.data.id) throw new Error('Google Drive did not return a file id.');
+  return res.data.id;
+}
+
+/** True when uploads go to real Google Drive rather than the local development folder. */
+export function usesGoogleDrive(): boolean {
+  return getDrive() !== null;
 }
