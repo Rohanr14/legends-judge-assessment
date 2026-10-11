@@ -1,15 +1,23 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import type { NextPage } from 'next';
 import Image from 'next/image';
+import { useRouter } from 'next/router';
 import RegistrationForm from '../components/RegistrationForm';
 import { useAssessment } from '../contexts/AssessmentContext';
+import { UserInfo } from '../types/types';
 
 const Home: NextPage = () => {
-  const { resetAssessment } = useAssessment();
+  const router = useRouter();
+  const { resetAssessment, setUserInfo } = useAssessment();
 
   useEffect(() => {
     resetAssessment();
   }, [resetAssessment]);
+
+  const handleRegister = useCallback((info: UserInfo) => {
+    setUserInfo(info);
+    router.push('/instructions');
+  }, [setUserInfo, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
@@ -30,7 +38,7 @@ const Home: NextPage = () => {
             Register to begin
           </p>
         </div>
-        <RegistrationForm />
+        <RegistrationForm onRegister={handleRegister} />
       </div>
     </div>
   );
